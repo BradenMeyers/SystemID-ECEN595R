@@ -35,7 +35,7 @@ We made several important assumptions in order to construct a simplified AUV dyn
 For a single translational axis, the continuous-time dynamics are modeled as:
 
 $$
-F(t) = (m + m_a) * a(t) + d_l * v(t) + d_q * |v(t)| v(t)
+F(t) = (m + m_a) \ a(t) + d_l \ v(t) + d_q \ |v(t)| \ v(t)
 $$
 
 where:
@@ -112,9 +112,29 @@ The BlueROV2 employs a fairly simple dynamics model in the simulator. It has som
 
 #### Actual Parameters
 
+$$
+\theta = \begin{bmatrix}
+ 11.5 \\ 11.5 \\ 1.80
+\end{bmatrix}
+$$
+
 #### Estimated Parameters (Noiseless)
 
+$$
+\hat{\theta} = \begin{bmatrix}
+ 11.588 \\ 15.071 \\ - 0.444
+\end{bmatrix}
+$$
+
+
 #### Estimated Parameters (Noisy)
+
+$$
+\hat{\theta} = \begin{bmatrix}
+ 12.732 \\ 12.392 \\ 2.846
+\end{bmatrix}
+$$
+
 
 ### CougUV
 
@@ -122,9 +142,27 @@ The CougUV, in constrast to the BlueROV2, uses a more sophisticated dynamics mod
 
 #### Actual Parameters
 
+$$
+\theta = \begin{bmatrix}
+ 31.87 \\ 1.593 \\ 6.109
+\end{bmatrix}
+$$
+
 #### Estimated Parameters (Noiseless)
 
+$$
+\hat{\theta} = \begin{bmatrix}
+ 30.624 \\ 1.494 \\ 5.999
+\end{bmatrix}
+$$
+
 #### Estimated Parameters (Noisy)
+
+$$
+\hat{\theta} = \begin{bmatrix}
+ 14.625 \\ 7.312 \\ -4.600
+\end{bmatrix}
+$$
 
 ## Real World Results
 
