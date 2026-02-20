@@ -1,6 +1,6 @@
 # ECEN 595R - AUV System ID
 
-## Background
+## Motivation
 
 Autonomous Underwater Vehicle (AUV) localization in GPS-denied, feature-poor environments is hard, especially in the presence of acoustic spoofing (i.e. military applications). In these scenarios, AUVs often have to rely on noisy and drifting internal sensor data (dead reckoning) to predict their position. As such, as part of our current research we've been exploring effective odometry methods for GPS-denied, acoustic-challenged environments. Typically, common approaches to this problem would include implementing an EKF, UKF, or some specialized variant of the two. Instead, we've opted for a fixed-lag smoothing approach using factor graphs, which allows us to optimize over a window of past states (i.e. 10 seconds) at each timestep. This improves our estimate significantly compared to filters like the EKF, which only consider the current state and have no way to use new information to correct past linearization errors. An diagram of our factor graph structure is included below:
 
