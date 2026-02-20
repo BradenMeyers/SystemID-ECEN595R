@@ -1,6 +1,6 @@
 ## Problem Description
 
-The objective of this work is to estimate hydrodynamic parameters of an underwater vehicle—specifically linear and quadratic damping coefficients and effective mass (added and rigid body) terms in the body-frame $x, y, z$ directions—using experimental data collected during vehicle operation.
+The objective of our work is to estimate hydrodynamic parameters of an underwater vehicle—specifically linear and quadratic damping coefficients and effective mass (added and rigid body) terms in the body-frame $x, y, z$ directions—using experimental data collected during vehicle operation.
 
 The available measurements consist of:
 
