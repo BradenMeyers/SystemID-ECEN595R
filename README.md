@@ -1,41 +1,41 @@
+# ECEN 595R - AUV System ID
+
+## Motivation
+
+Autonomous Underwater Vehicle (AUV) localization in GPS-denied, feature-poor environments is hard, especially in the presence of acoustic spoofing (i.e. military applications). In these scenarios, AUVs often have to rely on noisy and drifting internal sensor data (dead reckoning) to predict their position. As such, as part of our current research we've been exploring effective odometry methods for GPS-denied, acoustic-challenged environments. Typically, common approaches to this problem would include implementing an EKF, UKF, or some specialized variant of the two. Instead, we've opted for a fixed-lag smoothing approach using factor graphs, which allows us to optimize over a window of past states (i.e. 10 seconds) at each timestep. This improves our estimate significantly compared to filters like the EKF, which only consider the current state and have no way to use new information to correct past linearization errors. An diagram of our factor graph structure is included below:
+
+<img width="500" alt="fgo_dvl_binary" src="https://github.com/user-attachments/assets/29837c5b-056f-4aac-865d-4602751bc007" />
+
+When running in real time, the graph adds a new column of variables and measurements to the left at each time step. The light blue circles ($x, v, b$) represent the variables we're optimizing for at a specific point in time -- robot position/orientation ($x$), linear velocity ($v$), and IMU accel/gyro bias ($b$) -- and the colored dots represent measurements from sensors with some associated Gaussian probability. The dark blue dots on the right anchor the system with a prior estimate for each variable.
+
+We've seen good results with this approach, outperforming both alternative factor graph formulations and traditional filtering methods in simulation and on real world data. However, all the methods we've explored rely extensively on availability of a particular underwater sensor called a Doppler Velocity Log (DVL) to provide linear velocity measurements relative to the seafloor (represented by the light purple dot in the graph above). In our approach, DVL velocity measurements effectively constrain the body-frame velocity of the AUV, pinning it to a measured value (with some Gaussian approximation) at each point in time. When DVL goes offline, the optimizer really struggles distiguishing between changing linear velocities and changing IMU acceleration biases, which can lead to extensive estimation drift upon misclassification. To illustrate this, attached is a gif of the position estimate of a CougUV vehicle (given by the green arrow/lines and 3D model) relative to simulation ground truth (white arrow/lines). When DVL drops out (for 5 seconds every 30 seconds), the estimator REALLY struggles to solve for the location of the AUV.
+
+![Screencastfrom02-19-2026091742PM-ezgif com-optimize](https://github.com/user-attachments/assets/c16e8849-cdce-4414-aafa-15a81d994dc1)
+
+One of the approaches we've explored to mitigate the problem is to use a simple dynamic model to constrain the change in velocity between timesteps. With this added velocity constraint, the optimizer should be able to more accurately distinguish between changing velocities and IMU acceleration bias, preventing the DVL dropouts from corrupting the state estimate. A diagram of our approach augmented with the vehicle dynamic constraint (in orange) is attached below:
+
+<img width="500" height="824" alt="fgo_dynamics" src="https://github.com/user-attachments/assets/7d045ca6-f092-42e1-b7d1-641ac0fc2808" />
+
+Before this project, we had done some work with super-simple dynamic models (i.e. assuming constant velocity) to illustrate the proof of concept. With this project though, we wanted to take the opportunity to explore some more sophisticated models, which requires performing system identification to estimate vehicle parameters.
+
 ## Problem Description
 
-The objective of our work is to estimate hydrodynamic parameters of an underwater vehicle—specifically linear and quadratic damping coefficients and effective mass (added and rigid body) terms in the body-frame $x, y, z$ directions—using experimental data collected during vehicle operation.
+The objective of this project is to estimate hydrodynamic parameters of an underwater vehicle -- specifically linear and quadratic damping coefficients and effective mass (added and rigid body) terms in the body-frame $x, y, z$ directions -- using experimental data collected during vehicle operation or simulation.
 
 The available measurements consist of:
 
 - Linear accelerations from an IMU (high rate, noisy)
 - Body-frame linear velocities from a DVL (low rate, noisy)
-- Commanded thruster forces (subject to modeling uncertainty and degradation with velocity)
+- Commanded thruster forces (subject to modeling uncertainty and velocity degradation)
 
-The vehicle was operated in a stabilized mode with low angular rates, allowing rotational dynamics and Coriolis coupling to be neglected. Under these assumptions, the translational dynamics along each axis can be modeled independently using a reduced-order rigid-body + hydrodynamic model.
+We made several important assumptions in order to construct a simplified AUV dynamics model capable of being estimated by this data. First, we assumed the vehicle was operated in a stabilized mode with low angular rates, allowing rotational dynamics and Coriolis coupling to be neglected. Second, we ignored hardware effects such as thruster degradation, spool up time, etc. It is a VERY simplified model, but under these assumptions, the translational dynamics along each axis can be modeled and solved for independently.
 
-<!-- Although acceleration and velocity are measured at different rates and noise levels, all signals are synchronized and resampled prior to estimation. The MLE framework remains valid under this preprocessing, provided the resulting residuals are approximately Gaussian. -->
+### Dynamic Model
 
-<!-- A major challenge in this problem is that the data are:
-
-- Noisy and multi-rate (IMU at 200 Hz, DVL at 10 Hz)
-- Correlated through filtering and interpolation
-- Affected by unmodeled effects such as thrust degradation and added mass -->
-
-## Why MLE Is an Appropriate Solution
-
-The MLE framework was chosen because:
-
-- It provides a principled probabilistic interpretation of parameter estimation
-- MLE provides statistical tools (e.g., covariance of estimates, residual variance) to assess estimator quality.
-- It allows extension to:
-  - Weighted residuals using known measurement covariances
-  - Regularization or priors (MAP estimation)
-  - Joint estimation of multiple coupled parameters
-
-
-## Dynamic Model
-
-For a single translational degree of freedom, the continuous-time dynamics are modeled as:
+For a single translational axis, the continuous-time dynamics are modeled as:
 
 $$
-F(t) = (m + m_a) \, a(t) + d_l \, v(t) + d_q \, |v(t)| v(t) + b
+F(t) = (m + m_a) * a(t) + d_l * v(t) + d_q * |v(t)| v(t)
 $$
 
 where:
@@ -47,9 +47,8 @@ where:
 - $v(t)$: body-frame velocity
 - $d_l$: linear damping coefficient
 - $d_q$: quadratic damping coefficient
-- $b$: constant force bias
 
-This equation is linear in the unknown parameters and can be written in regression form:
+This equation is linear with respect to the unknown parameters and can be written as:
 
 $$
 F_i = \phi_i^T \theta + \varepsilon_i
@@ -59,130 +58,88 @@ with
 
 $$
 \phi_i = \begin{bmatrix}
- a_i & v_i & |v_i|v_i & 1
+ a_i & v_i & |v_i|v_i
 \end{bmatrix},
 \quad
 \theta = \begin{bmatrix}
- m + m_a \\ d_l \\ d_q \\ b
+ m + m_a \\ d_l \\ d_q
 \end{bmatrix}
 $$
 
 and measurement noise $\varepsilon_i$.
 
+### Why Maximum A Posteriori?
 
-## Maximum Likelihood Estimation (MLE)
+To solve for the unknown parameter vector $\theta$, we formulate a Maximum A Posteriori (MAP) estimation problem. This builds directly upon standard Maximum Likelihood Estimation (MLE) that we talked about in class, with the addition of Bayesian priors.
 
-### Definition
+#### Covariance Weighting
 
-In maximum likelihood parameter learning, we seek the parameter vector $\theta$ that maximizes the likelihood of observing the measured data. Let $D = o_{1:m}$ denote the dataset, where each observation $o_i$ corresponds to a observation of applied force. The maximum likelihood estimate is defined as:
+With standard MLE, we are attempting to find the parameter vector $\hat{\theta}$ that maximizes the likelihood of observing our measured data. Assuming the measurement noise is independent and zero-mean Gaussian, $\varepsilon_i \sim \mathcal{N}(0, \sigma_i^2)$, the likelihood of a single force observation is:
 
-$$
-\hat{\theta} = \arg\max_{\theta} P(D \,|\, \theta)
-$$
+$$P(F_i | \theta) = \mathcal{N}(F_i ; \phi_i^T \theta, \sigma_i^2)$$
 
-where $P(D | \theta)$ is the likelihood that the probabilistic model assigns to the observed data given parameters $\theta$. 
+Maximizing the overall probability of the dataset is mathematically equivalent to maximizing the log-likelihood:
 
----
+$$\hat{\theta}_{MLE} = \arg\max_{\theta} \sum_{i=1}^{N} \log P(F_i | \theta)$$
 
-### Likelihood Model
+Because the accuracy of our IMU and DVL data can change drastically over time, we can't treat all measurements equally. A sudden noise spike or DVL dropout (which we have seen many a time in testing) could potentially have a major effect on skewing the dynamic parameters. To approach this problem, we used Weighted Linear Least Squares (WLLS) from ECEN 671. In this solution, we scale the contribution of each data point by the inverse of its reported covariance ($\sigma_i^2$), effectively weighting confident sensor measurements heavily while down-weighting highly uncertain data:
 
-We assume:
+$$J_{MLE}(\theta) = \sum_{i=1}^{N} \frac{1}{\sigma_i^2} (F_i - \phi_i^T \theta)^2$$
 
-1. The samples are independent and identically distributed (i.i.d.)
-2. The measurement noise is zero-mean Gaussian with variance $\sigma^2$
+#### Bayesian Priors
 
-$$
-\varepsilon_i \sim \mathcal{N}(0, \sigma^2)
-$$
+From experience, when the target dataset doesn't contain enough "excitement" or information useful for estimating the parameters, we can get really bad estimates. In these states, the least-squares problem lacks the information needed to constrain the parameters, which often leads to physically impossible results like negative mass or inverted drag (that somehow still tracked the data well!). To prevent this, MAP estimation incorporates a prior probability over the parameters, $P(\theta)$. We introduced a Bayesian prior ($\theta_{prior}$) modeled as a Gaussian with an associated confidence ($\Sigma_{prior}$). This allows us to give a "ballpark" physical estimate to regularize the cost function:
 
-Under these assumptions, the likelihood of a single observation is:
+$$J_{MAP}(\theta) = J_{MLE}(\theta) + (\theta - \theta_{prior})^T \Sigma_{prior}^{-1} (\theta - \theta_{prior})$$
 
-$$
-P(o_i | \theta) = \mathcal{N}(F_i \,;\, \phi_i^T \theta, \sigma^2)
-$$
+#### Matrix Formulation and Solution
 
-and the likelihood of the full dataset is:
+To solve this in code, we stack our weighted data samples into a regression matrix $\mathbf{X}_w$ and measurement vector $\mathbf{y}_w$, and append our prior constraints to form a single overdetermined linear system:
 
-$$
-P(D | \theta) = \prod_{i=1}^m P(o_i | \theta)
-$$
+$$\mathbf{y}_{final} = \mathbf{X}_{final}\theta + \epsilon$$
 
----
+By solving this system, the parameter estimation is able to take into account strictly data-driven information when sensor confidence is high, but also converges somewhat near our expected baseline when data is sparse. The final MAP parameter estimate is then evaluated using the standard least-squares solution:
 
-### Log-Likelihood
+$$\hat{\theta} = (\mathbf{X}_{final}^T \mathbf{X}_{final})^{-1}\mathbf{X}_{final}^T\mathbf{y}_{final}$$
 
-Maximizing the likelihood is equivalent to maximizing the log-likelihood:
+## Simulation Results
 
-$$
-\hat{\theta} = \arg\max_{\theta} \sum_{i=1}^m \log P(o_i | \theta)
-$$
+We used the HoloOcean simulator to benchmark our parameter estimation against two different AUVs with known(ish) parameters.
 
-Substituting the Gaussian density and removing constants yields:
+### BlueROV2
 
-$$
-\hat{\theta} = \arg\min_{\theta} \sum_{i=1}^m (F_i - \phi_i^T \theta)^2
-$$
+The BlueROV2 employs a fairly simple dynamics model in the simulator. It has some rotation torque and drag effects that our model doesn't capture.
 
-Thus, under i.i.d. Gaussian noise assumptions, maximum likelihood estimation reduces to ordinary least squares.
+#### Actual Parameters
 
----
+#### Estimated Parameters (Noiseless)
 
-### Least Square Estimation
+#### Estimated Parameters (Noisy)
 
-$$
-y_i = F_{thrust,x}^b(t_i)
-$$
+### CougUV
 
-and define the regression matrix
+The CougUV, in constrast to the BlueROV2, uses a more sophisticated dynamics model from Thor Fossen. It explicitly models processes such as spool up time, thruster velocity degredation, and hydrostatic forces.
 
-$$
-\mathbf{X}_i =
-\begin{bmatrix}
-a_{imu,x}^b(t_i) & v_x^b(t_i) & |v_x^b(t_i)| v_x^b(t_i) &  1
-\end{bmatrix}
-$$
+#### Actual Parameters
 
-with parameter vector
+#### Estimated Parameters (Noiseless)
 
+#### Estimated Parameters (Noisy)
 
-$$
-\theta =
-\begin{bmatrix}
-m_x  \\
-D_{l,x} \\
-D_{q,x} \\
-b
-\end{bmatrix}
-$$
+## Real World Results
 
-Stacking all samples gives the linear model
+As part of the project, we took a BlueROV2 to the RB pool on campus to collect some real-world data.
 
-$$
-\mathbf{y} = \mathbf{X}\theta + \epsilon
-$$
+<img width="500" src="https://github.com/user-attachments/assets/f5b5c484-6848-4de7-9218-4e263215d28e" />
 
-Assuming independent and identically distributed Gaussian samples, the likelihood is
+#### Estimated Parameters
 
-$$
-P(\mathbf{y} \mid \theta, \sigma^2)
-= \prod_i \mathcal{N}(y_i; \mathbf{X}_i\theta, \sigma^2)
-$$
+These parameters don't match what we expected nearly as well as our results from simulation, but we expected that for the most part -- real world testing introduces time synchronization issues, tether dynamics, thruster power variations, accidental hits against the bottom, and more that isn't modeled in simulation. In particular, a setting preset was overriden and we were only able to poll the PWM for the sensors at 2 Hz instead of the expected 50 Hz, which reduced the resolution of our data significantly. There are definitely some more research possibilities here.
 
-Maximizing the log-likelihood yields the maximum likelihood estimate
+## Conclusion
 
-$$
-\hat{\theta} = (\mathbf{X}^T \mathbf{X})^{-1}\mathbf{X}^T\mathbf{y}
-$$
+To tie it back into the project motivation, we revisited the DVL dropout simulation from the first section. This time we added the dynamic constraint on the change in velocity using our simplified dynamic model, and populated the values based on our parameter estimation results for the CougUV in HoloOcean. Attached is the gif of the improved state estimate during the same DVL dropouts:
 
-and the noise variance estimate
+![ezgif com-optimize](https://github.com/user-attachments/assets/40290898-3cb9-4685-a802-b25ed5d429b4)
 
-$$
-\hat{\sigma}^2 = \frac{1}{N - p} \|\mathbf{y} - \mathbf{X}\hat{\theta}\|^2
-$$
-
-The covariance of the parameter estimate is
-
-$$
-\mathrm{Cov}(\hat{\theta}) = \hat{\sigma}^2 (\mathbf{X}^T \mathbf{X})^{-1}
-$$
-
+It works pretty well!
