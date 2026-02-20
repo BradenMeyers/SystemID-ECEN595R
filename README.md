@@ -76,7 +76,9 @@ $$
 \end{bmatrix},
 \quad
 \theta = \begin{bmatrix}
- m + m_a \\ d_l \\ d_q
+ m + m_a \\
+ d_l \\ 
+ d_q
 \end{bmatrix}
 $$
 
@@ -128,7 +130,9 @@ The BlueROV2 employs a fairly simple dynamics model in the simulator. It has som
 
 $$
 \theta = \begin{bmatrix}
- 11.5 \\ 11.5 \\ 1.80
+ 11.5 \\ 
+ 11.5 \\ 
+ 1.80
 \end{bmatrix}
 $$
 
@@ -136,7 +140,9 @@ $$
 
 $$
 \hat{\theta} = \begin{bmatrix}
- 11.588 \\ 15.071 \\ - 0.444
+ 11.588 \\ 
+ 15.071 \\ 
+ -0.444
 \end{bmatrix}
 $$
 
@@ -145,7 +151,9 @@ $$
 
 $$
 \hat{\theta} = \begin{bmatrix}
- 12.732 \\ 12.392 \\ 2.846
+ 12.732 \\ 
+ 12.392 \\ 
+ 2.846
 \end{bmatrix}
 $$
 
@@ -158,7 +166,9 @@ The CougUV, in constrast to the BlueROV2, uses a more sophisticated dynamics mod
 
 $$
 \theta = \begin{bmatrix}
- 31.87 \\ 1.593 \\ 6.109
+ 31.87 \\ 
+ 1.593 \\ 
+ 6.109
 \end{bmatrix}
 $$
 
@@ -166,7 +176,9 @@ $$
 
 $$
 \hat{\theta} = \begin{bmatrix}
- 30.624 \\ 1.494 \\ 5.999
+ 30.624 \\ 
+ 1.494 \\ 
+ 5.999
 \end{bmatrix}
 $$
 
@@ -174,7 +186,9 @@ $$
 
 $$
 \hat{\theta} = \begin{bmatrix}
- 14.625 \\ 7.312 \\ -4.600
+ 14.625 \\ 
+ 7.312 \\ 
+ -4.600
 \end{bmatrix}
 $$
 
@@ -187,15 +201,13 @@ As part of the project, we took a BlueROV2 to the RB pool on campus to collect s
 #### Estimated Parameters
 
 $$
-\hat{\theta}
-=
-\begin{bmatrix}
-28.746 \\
+\hat{\theta} = \begin{bmatrix}
+ 28.746 \\
 140.948 \\
 -30.397
 \end{bmatrix}
-
 $$
+
 
 These parameters don't match what we expected nearly as well as our results from simulation, but we expected that for the most part -- real world testing introduces time synchronization issues, tether dynamics, thruster power variations, accidental hits against the bottom, and more that isn't modeled in simulation. In particular, a setting preset was overriden and we were only able to poll the PWM for the thrusters at 2 Hz instead of the expected 50 Hz, which reduced the resolution of our data significantly. There are definitely some more research possibilities here.
 
