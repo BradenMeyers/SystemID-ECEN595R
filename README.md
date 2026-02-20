@@ -1,5 +1,19 @@
 # ECEN 595R - AUV System ID
 
+## Running the Code
+
+```
+./run.sh
+```
+This will:
+- Create a virtual enviornment and install the python packages from pip
+- Show plotted results from the following different datasets:
+    - Simulation CougUV without noise
+    - Simulation CougUV with noise
+    - Simulation BlueROV without noise
+    - Simulation BlueROV with noise
+    - Real World BlueROV 
+
 ## Motivation
 
 Autonomous Underwater Vehicle (AUV) localization in GPS-denied, feature-poor environments is hard, especially in the presence of acoustic spoofing (i.e. military applications). In these scenarios, AUVs often have to rely on noisy and drifting internal sensor data (dead reckoning) to predict their position. As such, as part of our current research we've been exploring effective odometry methods for GPS-denied, acoustic-challenged environments. Typically, common approaches to this problem would include implementing an EKF, UKF, or some specialized variant of the two. Instead, we've opted for a fixed-lag smoothing approach using factor graphs, which allows us to optimize over a window of past states (i.e. 10 seconds) at each timestep. This improves our estimate significantly compared to filters like the EKF, which only consider the current state and have no way to use new information to correct past linearization errors. An diagram of our factor graph structure is included below:
@@ -14,7 +28,7 @@ We've seen good results with this approach, outperforming both alternative facto
 
 One of the approaches we've explored to mitigate the problem is to use a simple dynamic model to constrain the change in velocity between timesteps. With this added velocity constraint, the optimizer should be able to more accurately distinguish between changing velocities and IMU acceleration bias, preventing the DVL dropouts from corrupting the state estimate. A diagram of our approach augmented with the vehicle dynamic constraint (in orange) is attached below:
 
-<img width="500" height="824" alt="fgo_dynamics" src="https://github.com/user-attachments/assets/7d045ca6-f092-42e1-b7d1-641ac0fc2808" />
+<img width="500" alt="fgo_dynamics" src="https://github.com/user-attachments/assets/7d045ca6-f092-42e1-b7d1-641ac0fc2808" />
 
 Before this project, we had done some work with super-simple dynamic models (i.e. assuming constant velocity) to illustrate the proof of concept. With this project though, we wanted to take the opportunity to explore some more sophisticated models, which requires performing system identification to estimate vehicle parameters.
 
@@ -183,7 +197,7 @@ $$
 
 $$
 
-These parameters don't match what we expected nearly as well as our results from simulation, but we expected that for the most part -- real world testing introduces time synchronization issues, tether dynamics, thruster power variations, accidental hits against the bottom, and more that isn't modeled in simulation. In particular, a setting preset was overriden and we were only able to poll the PWM for the sensors at 2 Hz instead of the expected 50 Hz, which reduced the resolution of our data significantly. There are definitely some more research possibilities here.
+These parameters don't match what we expected nearly as well as our results from simulation, but we expected that for the most part -- real world testing introduces time synchronization issues, tether dynamics, thruster power variations, accidental hits against the bottom, and more that isn't modeled in simulation. In particular, a setting preset was overriden and we were only able to poll the PWM for the thrusters at 2 Hz instead of the expected 50 Hz, which reduced the resolution of our data significantly. There are definitely some more research possibilities here.
 
 ## Conclusion
 
