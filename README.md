@@ -172,6 +172,17 @@ As part of the project, we took a BlueROV2 to the RB pool on campus to collect s
 
 #### Estimated Parameters
 
+$$
+\hat{\theta}
+=
+\begin{bmatrix}
+28.746 \\
+140.948 \\
+-30.397
+\end{bmatrix}
+
+$$
+
 These parameters don't match what we expected nearly as well as our results from simulation, but we expected that for the most part -- real world testing introduces time synchronization issues, tether dynamics, thruster power variations, accidental hits against the bottom, and more that isn't modeled in simulation. In particular, a setting preset was overriden and we were only able to poll the PWM for the sensors at 2 Hz instead of the expected 50 Hz, which reduced the resolution of our data significantly. There are definitely some more research possibilities here.
 
 ## Conclusion
