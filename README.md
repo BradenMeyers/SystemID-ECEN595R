@@ -6,13 +6,13 @@
 ./run.sh
 ```
 This will:
-- Create a virtual enviornment and install the python packages from pip
-- Show plotted results from the following different datasets:
+- Create a virtual environnment and install the python packages from pip
+- Show plotted results from the following datasets:
     - Simulation CougUV without noise
     - Simulation CougUV with noise
     - Simulation BlueROV without noise
     - Simulation BlueROV with noise
-    - Real World BlueROV 
+    - Real-world BlueROV 
 
 ## Motivation
 
