@@ -1,0 +1,4 @@
+rosbags
+scipy
+numpy
+matplotlib
